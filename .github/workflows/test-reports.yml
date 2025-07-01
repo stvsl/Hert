@@ -1,0 +1,226 @@
+name: Test Reports CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  test-reports:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+        compiler: [gcc, clang]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup C++ environment
+        uses: aminya/setup-cpp@v1
+        with:
+          compiler: ${{ matrix.compiler }}
+          vcvars: true
+          cmake: true
+          ninja: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev \
+            libxkbcommon-x11-0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-sync1 \
+            libxcb-xfixes0 \
+            libxcb-xinerama0 \
+            lcov \
+            gcovr
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: "a7b6122f6b6504d16d96117336a0562693579933"
+
+      - name: Configure CMake
+        run: |
+          cmake --preset=dev \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DENABLE_COVERAGE_REPORTS=ON \
+            -DENABLE_HTML_REPORTS=ON \
+            -DENABLE_JUNIT_REPORTS=ON \
+            -DENABLE_JSON_REPORTS=ON
+
+      - name: Build project
+        run: cmake --build build/dev --config ${{ matrix.build_type }}
+
+      - name: Run tests and generate reports
+        run: |
+          cd build/dev
+          # 运行标准测试
+          ctest --output-on-failure --verbose
+
+          # 生成各种格式的测试报告
+          make test-junit || true
+          make test-xml || true
+          make test-json || true
+          make test-html-report || true
+
+          # 生成覆盖率报告
+          if [ "${{ matrix.build_type }}" = "Debug" ]; then
+            make test-coverage-report || true
+          fi
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports-${{ matrix.compiler }}-${{ matrix.build_type }}
+          path: |
+            build/dev/test-reports/
+            !build/dev/test-reports/**/*.tmp
+          retention-days: 30
+
+      - name: Upload coverage to Codecov
+        if: matrix.build_type == 'Debug' && matrix.compiler == 'gcc'
+        uses: codecov/codecov-action@v4
+        with:
+          file: build/dev/test-reports/coverage.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: build/dev/test-reports/junit-report.xml
+          check_name: "Test Results (${{ matrix.compiler }}-${{ matrix.build_type }})"
+          comment_mode: create new
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            try {
+              const reportsDir = 'build/dev/test-reports';
+              const consoleReport = fs.readFileSync(path.join(reportsDir, 'console-report.txt'), 'utf8');
+              
+              // 提取测试摘要
+              const lines = consoleReport.split('\n');
+              const summaryStart = lines.findIndex(line => line.includes('test cases'));
+              const summary = summaryStart >= 0 ? lines.slice(summaryStart, summaryStart + 10).join('\n') : 'No summary available';
+              
+              const comment = `## 🧪 测试报告 (${{ matrix.compiler }}-${{ matrix.build_type }})
+              
+              \`\`\`
+              ${summary}
+              \`\`\`
+              
+              📊 **报告文件已生成并上传为 Artifacts**
+              - JUnit XML: 用于 CI/CD 集成
+              - HTML 报告: 详细的可视化报告
+              - JSON 报告: 用于进一步分析
+              ${matrix.build_type === 'Debug' ? '- 覆盖率报告: 代码覆盖率分析' : ''}
+              
+              [查看完整的测试 Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              console.log('Error creating comment:', error);
+              // 不让评论失败影响整个工作流
+            }
+
+  performance-benchmarks:
+    runs-on: ubuntu-latest
+    needs: test-reports
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup C++ environment
+        uses: aminya/setup-cpp@v1
+        with:
+          compiler: gcc
+          vcvars: true
+          cmake: true
+          ninja: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev \
+            libxkbcommon-x11-0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-sync1 \
+            libxcb-xfixes0 \
+            libxcb-xinerama0
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: "a7b6122f6b6504d16d96117336a0562693579933"
+
+      - name: Configure CMake for Performance
+        run: |
+          cmake --preset=dev \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_BENCHMARK_REPORTS=ON \
+            -DBENCHMARK_ITERATIONS=1000
+
+      - name: Build project
+        run: cmake --build build/dev --config Release
+
+      - name: Run performance benchmarks
+        run: |
+          cd build/dev
+          make test-benchmark || true
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: build/dev/test-reports/benchmark-*.json
+          retention-days: 90
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          tool: "customSmallerIsBetter"
+          output-file-path: build/dev/test-reports/benchmark-results.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          comment-on-alert: true
+          alert-threshold: "200%"
+          fail-on-alert: false
