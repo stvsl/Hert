@@ -1,12 +1,10 @@
 #include <QDebug>
-#include <exception>
 
 #include "Hert/HertApplication.hpp"
 
 HertApplication::HertApplication(int& argc, char** argv, int flags)
     : QApplication(argc, argv, flags)
 {
-  applyModernSettings();
 }
 
 HertApplication::~HertApplication() = default;

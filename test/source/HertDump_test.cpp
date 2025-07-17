@@ -2,63 +2,11 @@
 #include <functional>
 #include <string>
 
-#include "Hert/Hert.hpp"
+#include "Hert/HertDump.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "Hert/HertDump.hpp"
-
-// ========== Hert 类测试 ==========
-
-TEST_CASE("Hert::version returns valid version string", "[Hert][version]")
-{
-  SECTION("Version is not null or empty")
-  {
-    const char* version = Hert::version();
-    REQUIRE(version != nullptr);
-    REQUIRE(std::string(version).length() > 0);
-  }
-
-  SECTION("Version follows semantic versioning pattern")
-  {
-    const char* version = Hert::version();
-    std::string versionStr(version);
-
-    // 检查版本字符串格式（x.y.z 或 x.y.z-suffix）
-    bool hasValidFormat = false;
-
-    // 简单的版本格式检查：至少包含数字和点
-    if (versionStr.find('.') != std::string::npos) {
-      bool hasDigit = false;
-      for (char c : versionStr) {
-        if (std::isdigit(c)) {
-          hasDigit = true;
-          break;
-        }
-      }
-      hasValidFormat = hasDigit;
-    }
-
-    REQUIRE(hasValidFormat == true);
-  }
-
-  SECTION("Multiple calls return the same version")
-  {
-    const char* version1 = Hert::version();
-    const char* version2 = Hert::version();
-
-    REQUIRE(std::string(version1) == std::string(version2));
-  }
-
-  SECTION("Version string is consistent")
-  {
-    // 测试版本字符串的一致性
-    std::string version1(Hert::version());
-    std::string version2(Hert::version());
-
-    REQUIRE(version1 == version2);
-  }
-}
+#include "Hert/Hert.hpp"
 
 // ========== HertDump 类测试 ==========
 

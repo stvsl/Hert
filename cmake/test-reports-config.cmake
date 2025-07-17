@@ -11,6 +11,11 @@ option(ENABLE_HTML_REPORTS "Enable HTML reports" ON)
 option(ENABLE_TAP_REPORTS "Enable TAP reports" OFF)
 option(ENABLE_CONSOLE_REPORTS "Enable console reports" ON)
 
+# 综合报告配置
+option(ENABLE_UNIFIED_REPORTS "Enable unified comprehensive reports" ON)
+set(UNIFIED_REPORT_NAME "${PROJECT_NAME}-comprehensive-test-report" CACHE STRING "Name for unified test report")
+set(UNIFIED_REPORT_TITLE "${PROJECT_NAME} 综合测试报告" CACHE STRING "Title for unified test report")
+
 # 性能测试配置
 option(ENABLE_BENCHMARK_REPORTS "Enable benchmark reports" ON)
 set(BENCHMARK_ITERATIONS "100" CACHE STRING "Number of benchmark iterations")
@@ -33,6 +38,13 @@ option(GENERATE_GITHUB_ACTIONS "Generate GitHub Actions test summary" OFF)
 
 # 测试超时配置
 set(TEST_TIMEOUT "300" CACHE STRING "Test timeout in seconds")
+
+# 统一测试可执行文件配置
+option(ENABLE_UNIFIED_TEST_EXECUTABLE "Create a single executable containing all tests" OFF)
+
+# 自动测试发现配置
+option(ENABLE_AUTO_TEST_DISCOVERY "Automatically discover test files" ON)
+set(TEST_FILE_PATTERNS "*test*.cpp;*Test*.cpp;*TEST*.cpp" CACHE STRING "Patterns for test file discovery")
 
 # 自定义测试标签
 set(PERFORMANCE_TEST_TAGS "[performance]" CACHE STRING "Tags for performance tests")

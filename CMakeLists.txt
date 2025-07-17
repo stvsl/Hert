@@ -34,9 +34,16 @@ file_collector(
     EXTENSIONS .cpp
 )
 
+file_collector(
+    HERT_HEADERS
+    FOLDERS ${CMAKE_SOURCE_DIR}/include
+    EXTENSIONS .hpp .h
+)
+
 add_library(
     Hert_Hert
     ${HERT_SOURCES}
+    ${HERT_HEADERS}
 )
 add_library(Hert::Hert ALIAS Hert_Hert)
 
@@ -80,6 +87,7 @@ target_compile_features(Hert_Hert PUBLIC cxx_std_20)
 find_package(fmt REQUIRED)
 find_package(cpptrace CONFIG REQUIRED)
 find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(Hert_Hert 
     PRIVATE 
@@ -88,6 +96,7 @@ target_link_libraries(Hert_Hert
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
+    spdlog::spdlog
 )
 
 # ---- Install rules ----

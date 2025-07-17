@@ -1,5 +1,7 @@
 add_executable(HelloHert
     main.cpp
+    MainWindow.cpp
+    MainWindow.hpp
 )
 
 set(CMAKE_AUTOMOC ON)

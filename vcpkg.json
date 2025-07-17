@@ -9,6 +9,10 @@
     {
       "name": "cpptrace",
       "version>=": "0.8.3#0"
+    },
+    {
+      "name": "spdlog",
+      "version>=": "1.11.0#0"
     }
   ],
   "default-features": [],
